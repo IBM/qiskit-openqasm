@@ -300,7 +300,7 @@ We introduce a ``boxas`` expression for labeling a box. We primarily use this to
 later refer to the length of this box. Boxed expressions are good for
 this because their contents are isolated and cannot be combined with
 gates outside the box. Therefore, no matter how the contents of the box
-get optimized, the ``lengthof(boxlabel`` has a well-defined meaning.
+get optimized, the ``lengthof(boxlabel)`` has a well-defined meaning.
 
 .. code-block:: c
 

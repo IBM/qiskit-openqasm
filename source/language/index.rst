@@ -28,3 +28,4 @@ semantics.
    directives
    delays
    pulses
+   openpulse
