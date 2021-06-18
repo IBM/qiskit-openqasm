@@ -287,47 +287,161 @@ to properly take into account the finite length of each gate.
 Boxed expressions
 -----------------
 
-We introduce a ``box`` expression for scoping a particular part of the circuit.
-A boxed subcircuit can never be inlined (until target code generation
-time), and optimizations across the boundary of a box are forbidden. The
-contents inside the box can be optimized. The contents around the box
-can be optimized too, e.g. it is permissible to commute a gate past a
-box by knowing the unitary implemented by the box. Delays that are
-within a box are implementation details of the box; they are invisible
-to the outside scope and therefore do not prevent commutation.
-
-We introduce a ``boxas`` expression for labeling a box. We primarily use this to
-later refer to the length of this box. Boxed expressions are good for
-this because their contents are isolated and cannot be combined with
-gates outside the box. Therefore, no matter how the contents of the box
-get optimized, the ``lengthof(boxlabel`` has a well-defined meaning.
+We introduce a ``box`` statement for scoping the timing of a particular part of the circuit.
+A boxed subcircuit is different from a ``gate`` or ``def`` subroutine, in that it is merely 
+a pointer to a piece of code within the larger scope which constains it. This can be used to
+signal permissible logical-level optimizations to the compiler: optimizing operations within
+a ``box`` definition is permitted, and optimizations that move operations from one side to
+the other side of a box are permitted, but moving operations either into or out of the box as
+part of an optimization is forbidden. The compiler can also be given a description of the
+operation which a ``box`` definition is meant to realise, allowing it to re-order gates around
+the box. For example, consider a dynamical decoupling sequence inserted in a part of the circuit:
 
 .. code-block:: c
 
-       boxas mybox {
-           cx q[0], q[1];
-           delay[200ns] q[0];
-       }
-       delay[length(mybox)] q[2], q[3];
-       cx q[2], q[3];
+    rx(2*π/12) q;
+    box {
+        delay[ddt] q;
+        x q;
+        delay[ddt] q;
+        x q;
+        delay[ddt] q;
+    }
+    rx(3*π/12) q;
 
-We introduce a ``boxto`` expression. The contents of it will be boxed, and in
-addition a total duration will be assigned to the box. This is useful
-for conditionals where the box will declare a hard deadline. The natural
-length of the box must be smaller than the declared boxto duration,
-otherwise a compile-time error will be raised. The stretch inside the
-box will always be set to fill the difference between the declared
-length and the natural length.
+By boxing the sequence, we create a box that implements the identity. The compiler is now free
+to commute a gate past the box by knowing the unitary implemented by the box:
 
 .. code-block:: c
 
-      // defines a 1ms box whose content is just a centered CNOT
-       boxto 1ms {
-           stretch a;
-           delay[a] q;
-           cx q[0], q[1];
-           delay[a] q;
-       }
+    rx(5*π/12) q;
+    box {
+        delay[ddt] q;
+        x q;
+        delay[ddt] q;
+        x q;
+        delay[ddt] q;
+    }
+
+The compiler can thus perform optimizations without interfering with the implmentation of the
+dynamical decoupling sequence. 
+
+As with other operations, we may use square brakets to assign a duration to a box: this can be
+used to put hard constraints on the execution of a particular sub-circuit by requiring it to
+have the assigned duration. This can be useful in scenarios where the exact duration of a piece
+of code is unknown (*e.g.*, if it is runtime dependent), but where it would be helpful to impose
+a duration on it for the purpose of scheduling the larger circuit. For example, if the duration
+of the parameterized gates ``mygate1(a, b), mygate2(a, b)`` depend on values of the variables
+``a`` and ``b`` in a complex way, but an offline calculation has shown that the total will never
+require more than 150ns for all valid combinations:
+
+.. code-block:: c
+
+    // some complicated circuit that gives runtime values to a, b
+    box [150ns] {
+        delay[str1] q1; // Schedule as late as possible within the box
+        mygate1(a, a+b) q[0], q[1];
+        mygate2(a, a-b) q[1], q[2];
+        mygate1(a-b, b) q[0], q[1];
+    }
+
+Boxes can be dressed by a ``verbatim`` modifier to prevent the compiler from optimizing the code
+piece inside.  The ``verbatim`` modifier is simply a compiler flag to let compiler passes ignore the
+boxed region. For example, gates will not be re-ordered or be cancelled in a ``verbatim`` box. The
+only two compiler passes that look inside a ``verbatim`` box are (1) the pass the resolves timing and
+duration (2) the pass that links gates to their ``defcal``. As a result, having any high-level constructs
+in a ``verbatim`` box that requires other compiler passes will result in a runtime error since related 
+compiler passes will not be able to look inside to properly compile them. Examples include:
+
+-  Virtual qubits
+
+-  Composite gates without a ``defcal``
+
+-  Subroutine/kernel calls
+
+``verbatim`` box is to give experienced users precice control of the boxed operations, it also
+means that users themselves have to be responsible for potential runtime errors.
+
+``verbatim`` box is useful in low-level calibration programs or error mitigation protocols. 
+For example, ``verbatim`` box can be used in digital zero noise extrapolation:
+
+.. code-block:: c
+
+    bit c;
+
+    verbatim box {
+        h $0;  // assume h has a defcal
+        h $0;
+        h $0;
+    }
+    cx $0, $1;
+    measure $0 -> c;
+
+``verbatim`` levels are defined for the convenience of some applications. The default ``verbatim``
+box is of level 0. Level 1 ``verbatim`` box admits qubit mapping. The following is an example of 
+using level 1 ``verbatim`` box:
+
+.. code-block:: c
+    
+    //a randomized benchmarking program
+    qubit q[2];
+    bit c[2];
+
+    reset q;
+    verbatim(1) box {
+        //assuming h, cz, s have a defcal
+        h q[0];
+        cz q[0], q[1];
+        s q[0];
+        cz q[0], q[1];
+        s q[0];
+        z q[0];
+        h q[0];
+        measure q -> c;
+    }
+
+Level 2 ``verbatim`` box allows both virtual qubits and composite gates inside. An application for
+level 2 ``verbatim`` box is the flag qubit scheme in quantum error correction:
+
+.. code-block:: c
+
+	// Flag fault-tolerant circuit for measuring the logical Hadamard
+	// operator of the [[7, 1, 3]] Steane code. Taken from page 6,
+	// https://quantum-journal.org/papers/q-2019-05-20-143/pdf/.
+
+	qubit steane_reg[7];
+	qubit flag_reg[4];
+	def ft_ctrl_hadamard qubit[7]: logical_qubits,
+						 qubit[1]: ancilla,
+						 qubit[4] flag_qubits -> bool {
+		bool success;
+		verbatim(2) box{
+			bit checks[4];
+			x ancilla; // prepare |+>
+			ch ancilla, logical_qubits[0];
+			cx flag_qubits[0], ancilla;
+			ch ancilla, logical_qubits[1];
+			cx flag_qubits[1], ancilla;
+			ch ancilla, logical_qubits[2];
+			cx flag_qubits[2], ancilla;
+			cx flag_qubits[1], ancilla;
+			cx flag_qubits[3], ancilla;
+			ch ancilla, logical_qubits[5];
+			cx flag_qubits[3], ancilla;
+			cx flag_qubits[2], ancilla;
+			ch ancilla, logical_qubits[3];
+			ch ancilla, logical_qubits[6];
+			cx flag_qubits[0], ancilla;
+			ch ancilla, logical_qubits[4];
+			checks = measure flag_qubits;
+		}
+	  success = ~(bool(checks[0]) | bool(checks[1]) |
+				  bool(checks[2]) | bool(checks[3]))
+	  return success;
+	}
+
+Also, the ``inline`` modifier is introduced to work with ``verbatim`` to allow composite gates for
+better readability. Thus, a ``verbatim(2) box`` is functionally equivalent to a ``verbatim(1) inline box``. 
 
 Barrier instruction
 -------------------
