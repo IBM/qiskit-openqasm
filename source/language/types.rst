@@ -191,6 +191,24 @@ compatible with run-time values on some platforms.
    // equivalent to pi_by_2 up to rounding errors
    angle[20](float_pi / 2);
 
+Complex numbers
+~~~~~~~~~~~~~~~
+
+Complex numbers may be declared as ``complex[type[size]] name``, for a numeric OpenQASM classical type
+``type`` (``int``, ``fixed``, ``float``, ``angle``) and a number of bits ``size``. The real
+and imaginary parts of the complex number are ``type[size]`` types. For instance, ``complex[float[32]] c``
+would declare a complex number with real and imaginary parts that are 32-bit floating point numbers. The
+``im`` keyword defines the imaginary number :math:`sqrt(-1)`. ``complex[type[size]]`` types are initalized as
+``a + b im``, where ``a`` and ``b`` must be of the same type as ``type[size]``. ``b`` must occur to the
+left of ``im`` and the two can only be seperated by spaces/tabs (or nothing at all).
+
+.. code-block:: c
+
+   complex[float[64]] c;
+   c = 2.5 + 3.5im; // 2.5, 3.5 are resolved to be ``float[64]`` types
+   complex[float[64]] d = 2.0+sin(π) + 3.1*5.5 im;
+   complex[int[32]] f = 2 + 5 im; // 2, 5 are resolved to be ``int[32]`` types
+
 Boolean types
 ~~~~~~~~~~~~~
 
@@ -257,7 +275,8 @@ namespace are listed in table `1 <#tab:real-constants>`__.
       | Euler’s number                | euler        | ℇ            | 2.7182818284...     |
       +-------------------------------+--------------+--------------+---------------------+
 
-Note that `e` is a valid identifier. `e/E` are also used in scientifier notation where appropriate.
+Note that `e` is a valid identifier. `e/E` are also used in scientific notation where appropriate.
+
 Types related to timing
 -----------------------
 

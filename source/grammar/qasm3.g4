@@ -102,6 +102,7 @@ singleDesignatorType
     | 'uint'
     | 'float'
     | 'angle'
+    | 'complex'
     ;
 
 doubleDesignatorType
@@ -118,6 +119,13 @@ classicalType
     | doubleDesignatorType doubleDesignator
     | noDesignatorType
     | bitType designator?
+    | 'complex' LBRACKET numericType RBRACKET
+    ;
+
+// numeric OpenQASM types
+numericType
+    : singleDesignatorType designator
+    | doubleDesignatorType doubleDesignator
     ;
 
 constantDeclaration
@@ -142,11 +150,16 @@ bitDeclaration
     : ( 'creg' Identifier designator? | 'bit' designator? Identifier ) equalsExpression?
     ;
 
+complexDeclaration
+    : 'complex' LBRACKET numericType RBRACKET Identifier equalsExpression?
+    ;
+
 classicalDeclaration
     : singleDesignatorDeclaration
     | doubleDesignatorDeclaration
     | noDesignatorDeclaration
     | bitDeclaration
+    | complexDeclaration
     ;
 
 classicalTypeList
@@ -162,6 +175,7 @@ classicalArgument
     ) Identifier
     | 'creg' Identifier designator?
     | 'bit' designator? Identifier
+    | 'complex' LBRACKET numericType designator RBRACKET Identifier
     ;
 
 classicalArgumentList
@@ -377,6 +391,7 @@ expressionTerminator
     : Constant
     | Integer
     | RealNumber
+    | ImagNumber
     | booleanLiteral
     | Identifier
     | StringLiteral
@@ -572,6 +587,8 @@ MUL : '*';
 DIV : '/';
 MOD : '%';
 
+IMAG: 'im';
+ImagNumber : ( Integer | RealNumber ) IMAG ;
 
 Constant : ( 'pi' | 'π' | 'tau' | '𝜏' | 'euler' | 'ℇ' );
 
@@ -591,7 +608,7 @@ Identifier : FirstIdCharacter GeneralIdCharacter* ;
 fragment SciNotation : [eE] ;
 fragment PlusMinus : PLUS | MINUS ;
 fragment Float : Digit+ DOT Digit* ;
-RealNumber : Float (SciNotation PlusMinus? Integer )? ;
+RealNumber : (Integer | Float ) (SciNotation PlusMinus? Integer )? ;
 
 fragment TimeUnit : 'dt' | 'ns' | 'us' | 'µs' | 'ms' | 's' ;
 // represents explicit time value in SI or backend units

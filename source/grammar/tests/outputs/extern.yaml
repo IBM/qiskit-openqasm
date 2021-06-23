@@ -1,6 +1,6 @@
 # indent w/ 2 spaces
 source: |
-  extern test_kern(bit[5], uint[10], fixed[4, 5]) -> float[6];
+  extern test_kern(bit[5], uint[10], fixed[4, 5], complex[float[64]]) -> float[6];
 reference: |
   program
     header
@@ -43,6 +43,20 @@ reference: |
                 expressionTerminator
                   5
               ]
+          ,
+          classicalType
+            complex
+            [
+            numericType
+              singleDesignatorType
+                float
+              designator
+                [
+                expression
+                  expressionTerminator
+                    64
+                ]
+            ]
         )
         returnSignature
           ->

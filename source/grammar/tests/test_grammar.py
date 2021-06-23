@@ -131,6 +131,7 @@ class TestGrammar:
     def test_declaration(self):
         """Test classical and quantum declaration."""
         self.load_and_compare_yaml("declaration.yaml")
+        self.load_and_compare_yaml("complex.yaml")
 
     def test_pragma(self):
         """Test pragma directive."""
