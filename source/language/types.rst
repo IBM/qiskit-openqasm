@@ -82,7 +82,7 @@ While program qubits can be named, hardware qubits are referenced only
 by the syntax ``$[NUM]``. For an ``n`` qubit system, we have physical qubit
 references given by ``$0``, ``$1``, ..., ``$n-1``. These qubit types are
 used in lower parts of the compilation stack when emitting physical
-circuits.
+circuits. Physical qubits must not be declared and they are, as all the qubits, global variables.
 
 .. code-block:: c
    :force:
