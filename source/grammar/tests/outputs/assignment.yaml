@@ -6,6 +6,7 @@ source: |
   int[10] x = 12;
   a[0] = b[1];
   x += int[10](a[1]);
+  measure q[1] -> a[0];
   a = measure q[1:2];
   b = a == 0;
 reference: |
@@ -125,25 +126,46 @@ reference: |
     statement
       assignmentStatement
         quantumMeasurementAssignment
-          indexIdentifierList
+          quantumMeasurement
+            measure
             indexIdentifier
-              a
+              q
+              [
+              expressionList
+                expression
+                  expressionTerminator
+                    1
+              ]
+          ->
+          indexIdentifier
+            a
+            [
+            expressionList
+              expression
+                expressionTerminator
+                  0
+            ]
+        ;
+    statement
+      assignmentStatement
+        quantumMeasurementAssignment
+          indexIdentifier
+            a
           =
           quantumMeasurement
             measure
-            indexIdentifierList
-              indexIdentifier
-                q
-                rangeDefinition
-                  [
-                  expression
-                    expressionTerminator
-                      1
-                  :
-                  expression
-                    expressionTerminator
-                      2
-                  ]
+            indexIdentifier
+              q
+              rangeDefinition
+                [
+                expression
+                  expressionTerminator
+                    1
+                :
+                expression
+                  expressionTerminator
+                    2
+                ]
         ;
     statement
       assignmentStatement

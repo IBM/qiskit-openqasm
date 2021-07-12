@@ -250,12 +250,12 @@ quantumReset
     ;
 
 quantumMeasurement
-    : 'measure' indexIdentifierList
+    : 'measure' indexIdentifier
     ;
 
 quantumMeasurementAssignment
-    : quantumMeasurement ( ARROW indexIdentifierList)?
-    | indexIdentifierList EQUALS quantumMeasurement
+    : quantumMeasurement ( ARROW indexIdentifier )?
+    | indexIdentifier EQUALS quantumMeasurement
     ;
 
 quantumBarrier
