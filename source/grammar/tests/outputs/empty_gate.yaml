@@ -1,0 +1,17 @@
+# indent w/ 2 spaces
+source: |
+  gate g q {};
+reference: |
+  program
+    header
+    globalStatement
+      quantumGateDefinition
+        gate
+        quantumGateSignature
+          quantumGateName
+            g
+          identifierList
+            q
+        quantumBlock
+          {
+          }
